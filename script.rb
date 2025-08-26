@@ -13,8 +13,8 @@ HEADERS = {
   "Authorization" => "Bearer #{API_TOKEN}"
 }
 
-REGISTRATION = "D-AIEP"
-DAY_FROM = "2025-08-22T00:00:00Z"
+AIRCRAFT = "d-ainh"
+DAY_FROM = "2025-08-16T00:00:00Z"
 DAY_TO   = "2025-08-23T00:00:00Z"
 
 # Heuristic to keep only in-flight points (exclude taxi/ground).
@@ -23,7 +23,7 @@ ALT_FT_MIN   = 32 # feet
 SPD_KT_MIN   = 10 # knots
 
 def http_get(path, params = {})
-  puts "Calling GET #{path} with #{params.inspect}"
+  puts ">>> Calling GET #{path} with #{params.inspect}"
   uri = URI.join(API_BASE, path)
   uri.query = URI.encode_www_form(params) if params && !params.empty?
   req = Net::HTTP::Get.new(uri, HEADERS)
@@ -35,24 +35,35 @@ def http_get(path, params = {})
       JSON.parse(res.body)
     end
 
-  puts "  => got #{result.class}: #{result}"
-
   result
+rescue => e
+  if e.to_s.include?("429") || e.to_s.include?("too many requests")
+    puts "Rate limited, sleeping 20 seconds and retrying..."
+    sleep 20
+    retry
+  else
+    raise
+  end
 end
 
 puts "1) Find all flight legs (fr24_id) for D-AIEP on the day"
-summary = http_get("/api/flight-summary/light", {
-  "registrations" => REGISTRATION,
-  "flight_datetime_from" => DAY_FROM,
-  "flight_datetime_to"   => DAY_TO
-})
+summary =
+  http_get("/api/flight-summary/light", {
+    "registrations" => AIRCRAFT,
+    "flight_datetime_from" => DAY_FROM,
+    "flight_datetime_to"   => DAY_TO
+  })
+
 flight_ids = summary.fetch("data", []).map { |f| f["fr24_id"] }.compact.uniq
 
-puts ">>> flight_ids: #{flight_ids.inspect}"
+puts ">>> flight_ids (#{flight_ids.count}): #{flight_ids.inspect}"
 
 puts "2) For each leg, fetch tracks and collect filtered points"
+
 all_points = []
-flight_ids.each do |fid|
+flight_ids.each_with_index do |fid, index|
+  puts ">>> Getting positions for flight_id #{fid} [#{index + 1}/#{flight_ids.size}]"
+
   tracks = http_get("/api/flight-tracks", { "flight_id" => fid }).first # returns { fr24_id, tracks: [...] }
 
   (tracks["tracks"] || []).each do |pt|
@@ -70,6 +81,8 @@ flight_ids.each do |fid|
       "direction" => pt["track"]       # degrees (0-360)
     }
   end
+
+  sleep 10 if flight_ids.size > 1 # be nice to the API if multiple calls
 end
 
 puts "3) Sort by timestamp and write to CSV file"
@@ -77,10 +90,10 @@ all_points.sort_by! { |p| p["timestamp"] }
 
 # Generate filename with timestamp
 timestamp = Time.now.strftime("%Y%m%d_%H%M%S")
-filename = "result_#{timestamp}.csv"
+filepath = "results/result_#{timestamp}_#{AIRCRAFT}_#{DAY_FROM}_#{DAY_TO}.csv"
 
-# Write to CSV file
-CSV.open(filename, "w") do |csv|
+puts "4) Write to CSV file: #{filepath}"
+CSV.open(filepath, "w") do |csv|
   # Add header row
   csv << ["latitude", "longitude", "timestamp", "altitude", "speed", "direction"]
 
@@ -97,4 +110,4 @@ CSV.open(filename, "w") do |csv|
   end
 end
 
-puts "CSV data written to: #{filename}"
+puts "CSV data written to: #{filepath}"
