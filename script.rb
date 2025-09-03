@@ -8,14 +8,7 @@ require "dotenv/load" # loads .env file if present
 # require "byebug"
 
 API_BASE = "https://fr24api.flightradar24.com"
-API_TOKEN =
-  if
-ENV.fetch("FR24_API_TOKEN") # set your token in env
-HEADERS = {
-  "Accept" => "application/json",
-  "Accept-Version" => "v1",
-  "Authorization" => "Bearer #{API_TOKEN}"
-}
+
 
 # Heuristic to keep only in-flight points (exclude taxi/ground).
 # Tune as needed. If you prefer only "airborne", increase ALT_FT_MIN or SPD_KT_MIN.
@@ -24,6 +17,11 @@ SPD_KT_MIN   = 10 # knots
 
 class AircraftPositionsScrapper
   def initialize(aircrafts, day_from, day_to, real_api_calls = false)
+    puts "Initializing AircraftPositionsScrapper"
+    puts "Aircrafts: #{aircrafts.join(", ")}"
+    puts "Date Range: #{day_from} to #{day_to}"
+    puts "Real API Calls: #{real_api_calls}"
+
     @aircrafts = aircrafts
     @day_from = day_from
     @day_to = day_to
@@ -36,21 +34,22 @@ class AircraftPositionsScrapper
   end
 
   def run
-    @aircrafts.each do |aircraft|
-      AircraftPositionsScrapper.scrap_aircraft(aircraft, @day_from, @day_to)
+    @aircrafts.each_with_index do |aircraft, index|
+      puts "Processing aircraft #{index + 1}/#{@aircrafts.size}: #{aircraft}"
+      AircraftPositionsScrapper.scrap_aircraft(aircraft, @day_from, @day_to, @api_token)
     end
   end
 
   private
 
-  def self.scrap_aircraft(aircraft, day_from, day_to)
+  def self.scrap_aircraft(aircraft, day_from, day_to, api_token)
     puts "1) Find all flight legs (fr24_id) for #{aircraft} on dates #{day_from} to #{day_to}"
-    fr24_flight_ids = get_flight_ids(aircraft, day_from, day_to)
+    fr24_flight_ids = get_flight_ids(aircraft, day_from, day_to, api_token)
 
     puts ">>> flight_ids (#{fr24_flight_ids.count})"
 
     puts "2) For each leg, fetch tracks and collect filtered points"
-    all_points = get_flights_location_points(fr24_flight_ids)
+    all_points = get_flights_location_points(fr24_flight_ids, api_token)
 
     # Generate filename with timestamp
     timestamp = Time.now.strftime("%Y%m%d_%H%M%S")
@@ -80,13 +79,13 @@ class AircraftPositionsScrapper
     puts "CSV data written to: #{filepath}"
   end
 
-  def self.get_flights_location_points(fr24_flight_ids)
+  def self.get_flights_location_points(fr24_flight_ids, api_token)
     all_points = []
 
     fr24_flight_ids.each_with_index do |fid, index|
       puts ">>> Getting positions for flight_id #{fid} [#{index + 1}/#{fr24_flight_ids.size}]"
 
-      response_body = http_get("/api/flight-tracks", { "flight_id" => fid }).first # returns { fr24_id, tracks: [...] }
+      response_body = http_get("/api/flight-tracks", { "flight_id" => fid }, api_token).first # returns { fr24_id, tracks: [...] }
 
       (response_body["tracks"] || []).each do |pt|
         alt   = pt["alt"]
@@ -111,25 +110,36 @@ class AircraftPositionsScrapper
     all_points
   end
 
-  def self.get_flight_ids(aircraft, day_from, day_to)
+  def self.get_flight_ids(aircraft, day_from, day_to, api_token)
     day_from_time_stamp = Time.parse(day_from).utc.iso8601
     day_to_time_stamp = Time.parse("#{day_to} 23:59:59 UTC").utc.iso8601
 
     summary =
-      http_get("/api/flight-summary/light", {
-        "registrations" => aircraft,
-        "flight_datetime_from" => day_from_time_stamp,
-        "flight_datetime_to"   => day_to_time_stamp
-      })
+      http_get(
+        "/api/flight-summary/light",
+        {
+          "registrations" => aircraft,
+          "flight_datetime_from" => day_from_time_stamp,
+          "flight_datetime_to"   => day_to_time_stamp
+        },
+        api_token
+      )
 
     summary.fetch("data", []).map { |f| f["fr24_id"] }.compact.uniq
   end
 
-  def self.http_get(path, params = {})
+  def self.http_get(path, params = {}, api_token)
     puts ">>> Calling GET #{path} with #{params.inspect}"
+
+    headers = {
+      "Accept" => "application/json",
+      "Accept-Version" => "v1",
+      "Authorization" => "Bearer #{api_token}"
+    }
+
     uri = URI.join(API_BASE, path)
     uri.query = URI.encode_www_form(params) if params && !params.empty?
-    req = Net::HTTP::Get.new(uri, HEADERS)
+    req = Net::HTTP::Get.new(uri, headers)
 
     result =
       Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|

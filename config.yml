@@ -42,7 +42,7 @@ aircrafts:
   # - D-AIZQ
   # - D-AIZR
   # - D-AIZS
-  # - D-AIZT
+  - D-AIZT
   - D-AIZW
   - D-AIZX
   - D-AIZY
