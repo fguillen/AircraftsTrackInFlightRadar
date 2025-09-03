@@ -5,9 +5,12 @@ require "json"
 require "csv"
 require "yaml"
 require "dotenv/load" # loads .env file if present
+# require "byebug"
 
 API_BASE = "https://fr24api.flightradar24.com"
-API_TOKEN = ENV.fetch("FR24_API_TOKEN") # set your token in env
+API_TOKEN =
+  if
+ENV.fetch("FR24_API_TOKEN") # set your token in env
 HEADERS = {
   "Accept" => "application/json",
   "Accept-Version" => "v1",
@@ -20,10 +23,16 @@ ALT_FT_MIN   = 32 # feet
 SPD_KT_MIN   = 10 # knots
 
 class AircraftPositionsScrapper
-  def initialize(aircrafts, day_from, day_to)
+  def initialize(aircrafts, day_from, day_to, real_api_calls = false)
     @aircrafts = aircrafts
     @day_from = day_from
     @day_to = day_to
+    @api_token =
+      if real_api_calls
+        ENV.fetch("FR24_API_TOKEN_PRODUCTION")
+      else
+        ENV.fetch("FR24_API_TOKEN_TEST")
+      end
   end
 
   def run
@@ -95,7 +104,7 @@ class AircraftPositionsScrapper
         }
       end
 
-      sleep 10 if fr24_flight_ids.size > 1 # be nice to the API if multiple calls
+      # sleep 10 if fr24_flight_ids.size > 1 # be nice to the API if multiple calls
     end
 
     all_points.sort_by! { |p| p["timestamp"] }
@@ -147,7 +156,8 @@ def load_configuration(config_path = "#{File.dirname(__FILE__)}/config.yml")
   {
     aircrafts: config["aircrafts"],
     day_from: config["day_from"],
-    day_to: config["day_to"]
+    day_to: config["day_to"],
+    real_api_calls: config["real_api_calls"]
   }
 end
 
@@ -155,5 +165,6 @@ configuration = load_configuration
 AircraftPositionsScrapper.new(
   configuration[:aircrafts],
   configuration[:day_from],
-  configuration[:day_to]
+  configuration[:day_to],
+  configuration[:real_api_calls]
 ).run

@@ -1,5 +1,106 @@
+real_api_calls: false
 aircrafts:
-  - D-AIQT
-  - D-AIQU
+  # A320
+  # - D-AIQT
+  # - D-AIQU
+  # - D-AIQW
+  # - D-AIUA
+  # - D-AIUB
+  # - D-AIUC
+  # - D-AIUD
+  # - D-AIUE
+  # - D-AIUF
+  # - D-AIUG
+  # - D-AIUH
+  # - D-AIUI
+  # - D-AIUJ
+  # - D-AIUK
+  # - D-AIUL
+  # - D-AIUM
+  # - D-AIUN
+  # - D-AIUO
+  # - D-AIUP
+  # - D-AIWA
+  # - D-AIWH
+  # - D-AIWI
+  # - D-AIWJ
+  # - D-AIWK
+  # - D-AIZA
+  # - D-AIZB
+  # - D-AIZC
+  # - D-AIZD
+  # - D-AIZE
+  # - D-AIZF
+  # - D-AIZG
+  # - D-AIZH
+  # - D-AIZI
+  # - D-AIZJ
+  # - D-AIZM
+  # - D-AIZN
+  # - D-AIZO
+  # - D-AIZP
+  # - D-AIZQ
+  # - D-AIZR
+  # - D-AIZS
+  # - D-AIZT
+  - D-AIZW
+  - D-AIZX
+  - D-AIZY
+  - D-AIZZ
+  # A321
+  - D-AIDA
+  - D-AIDB
+  - D-AIDC
+  - D-AIDD
+  - D-AIDE
+  - D-AIDF
+  - D-AIDG
+  - D-AIDH
+  - D-AIDI
+  - D-AIDJ
+  - D-AIDK
+  - D-AIDL
+  - D-AIDM
+  - D-AIDN
+  - D-AIDW
+  - D-AIDX
+  - D-AIRA
+  - D-AIRC
+  - D-AIRF
+  - D-AIRH
+  - D-AIRK
+  - D-AIRL
+  - D-AIRM
+  - D-AIRN
+  - D-AIRO
+  - D-AIRP
+  - D-AIRR
+  - D-AIRS
+  - D-AIRT
+  - D-AIRU
+  - D-AIRW
+  - D-AIRX
+  - D-AIRY
+  - D-AISB
+  - D-AISC
+  - D-AISD
+  - D-AISF
+  - D-AISG
+  - D-AISH
+  - D-AISI
+  - D-AISJ
+  - D-AISK
+  - D-AISL
+  - D-AISN
+  - D-AISO
+  - D-AISP
+  - D-AISQ
+  - D-AISR
+  - D-AIST
+  - D-AISU
+  - D-AISV
+  - D-AISW
+  - D-AISX
+  - D-AISZ
 day_from: "2025-08-16"
 day_to: "2025-08-23"
